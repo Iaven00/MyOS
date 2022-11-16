@@ -8,6 +8,9 @@
    {
 
    protected:
+	
+	static InterruptManager* ActiveInterruptManager; //静态中断处理器
+	
 	struct GateDescriptor
 	{
 	    uint16_t handlerAddressLowBits;
@@ -41,13 +44,14 @@
 
    public:
 	static uint32_t handleInterrupt(uint8_t interruptNumber,uint32_t esp);
-
+	uint32_t DoHandleInterrupt(uint8_t interruptNumber,uint32_t esp);
 	InterruptManager(GlobalDescriptorTable* globalDescriptorTable);
 	~InterruptManager();
 	static void IgnoreInterruptRequest();
 	static void HandleInterruptRequest0x00();
 	static void HandleInterruptRequest0x01();
 	void Activate();
+        void Deactivate();
 
    };
 

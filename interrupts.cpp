@@ -7,12 +7,9 @@ void printf(char* str);
 InterruptManager::GateDescriptor InterruptManager::interruptDescriptorTable[256];
 
 
-uint32_t InterruptManager::handleInterrupt(uint8_t interruptNumber,uint32_t esp)
-{
-    printf("  interrupt!");
+InterruptManager* InterruptManager::ActiveInterruptManager=0;
 
-    return esp;
-}
+
 
 InterruptManager::InterruptManager(GlobalDescriptorTable* gdt)
 : picMasterCommand(0x20), // 初始化端口号
@@ -61,8 +58,38 @@ InterruptManager::~InterruptManager()
 
 void InterruptManager::Activate(){
 
+    if(ActiveInterruptManager!=0){
+	ActiveInterruptManager->Deactivate();
+    }
+    ActiveInterruptManager = this; //静态中断处理器指向的永远是当前处理的中断
     asm("sti");
 
+}
+
+void InterruptManager::Deactivate(){
+
+    if(ActiveInterruptManager == 0){
+	ActiveInterruptManager=0;
+	asm("cli");
+    }
+
+}
+
+
+uint32_t InterruptManager::handleInterrupt(uint8_t interruptNumber,uint32_t esp)
+{
+    if(ActiveInterruptManager!=0) //中断处理器不为0,即存在中断
+	return ActiveInterruptManager->DoHandleInterrupt(interruptNumber,esp);
+
+    return esp;
+}
+
+
+uint32_t InterruptManager::DoHandleInterrupt(uint8_t interruptNumber,uint32_t esp)
+{
+    printf("interrupt!");
+
+    return esp;
 }
 
 
