@@ -23,7 +23,9 @@ Port8Bit::~Port8Bit()
 
 void Port8Bit::Write(uint8_t data)
 {
+    // asm为内联汇编，volatile为编译器忽略代码优化
     __asm__ volatile("outb %0, %1" : : "a" (data), "Nd" (portnumber));
+	
 }
 
 uint8_t Port8Bit::Read()

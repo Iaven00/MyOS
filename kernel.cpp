@@ -2,6 +2,7 @@
 #include "gdt.h"
 #include "types.h"
 #include "interrupts.h"
+#include "keyboard.h"
 // #define GRAPHICSMODE
 
 
@@ -56,10 +57,13 @@ extern "C" void callConstructors()
 
 extern "C" void kernelMain(const void* multiboot_structure, uint32_t /*multiboot_magic*/)
 {
-
+	
+    printf("Hello MyOS\n");
     GlobalDescriptorTable gdt;
 
     InterruptManager interrupts(&gdt);
+
+    KeyboardDriver keyboard(&interrupts);
 
     interrupts.Activate();
 
@@ -67,3 +71,5 @@ extern "C" void kernelMain(const void* multiboot_structure, uint32_t /*multiboot
     while(1);
    
 }
+
+

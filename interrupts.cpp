@@ -1,7 +1,24 @@
 
 #include "interrupts.h"
-
 void printf(char* str);
+
+InterruptHandler::InterruptHandler(uint8_t interruptNumber,
+InterruptManager* interruptManager)
+{
+    this->interruptNumber = interruptNumber;
+    this->interruptManager = interruptManager;
+    interruptManager->handlers[interruptNumber] = this;
+}
+	
+InterruptHandler::~InterruptHandler(){
+    if(interruptManager->handlers[interruptNumber] == this)
+	interruptManager->handlers[interruptNumber] = 0;
+}
+
+uint32_t InterruptHandler::HandleInterrupt(uint32_t esp)
+{
+    return esp;
+}
 
 
 InterruptManager::GateDescriptor InterruptManager::interruptDescriptorTable[256];
@@ -20,11 +37,11 @@ InterruptManager::InterruptManager(GlobalDescriptorTable* gdt)
     uint16_t CodeSegment = gdt->CodeSegmentSelector();
     const uint8_t IDT_INTERRUPT_GATE = 0xE;
     for(uint16_t i = 0; i< 256; i++)
-
-	
+    {
+	handlers[i] = 0;
         SetInterruptDescriptorTableEntry(
 	i, CodeSegment, &IgnoreInterruptRequest, 0, IDT_INTERRUPT_GATE);
-
+    }
     SetInterruptDescriptorTableEntry(
     0x20, CodeSegment,&HandleInterruptRequest0x00, 0, IDT_INTERRUPT_GATE);
     SetInterruptDescriptorTableEntry(
@@ -58,7 +75,8 @@ InterruptManager::~InterruptManager()
 
 void InterruptManager::Activate(){
 
-    if(ActiveInterruptManager!=0){
+    printf("this is Activate\n");
+    if(ActiveInterruptManager!=0){//说明此时系统中存在中断
 	ActiveInterruptManager->Deactivate();
     }
     ActiveInterruptManager = this; //静态中断处理器指向的永远是当前处理的中断
@@ -66,9 +84,9 @@ void InterruptManager::Activate(){
 
 }
 
-void InterruptManager::Deactivate(){
-
-    if(ActiveInterruptManager == 0){
+void InterruptManager::Deactivate(){ //收回指向当前实例的指针
+    printf("this is Deactivate\n");
+    if(ActiveInterruptManager == this){
 	ActiveInterruptManager=0;
 	asm("cli");
     }
@@ -78,16 +96,42 @@ void InterruptManager::Deactivate(){
 
 uint32_t InterruptManager::handleInterrupt(uint8_t interruptNumber,uint32_t esp)
 {
-    if(ActiveInterruptManager!=0) //中断处理器不为0,即存在中断
-	return ActiveInterruptManager->DoHandleInterrupt(interruptNumber,esp);
+    char* hex = "this is handleInterrupt   \n";
+    hex[23] = '0'+interruptNumber/100;
+    hex[24] = '0'+(interruptNumber/10)%10;
+    hex[25] = '0'+interruptNumber%10;
+    //printf(hex);
 
+    if(ActiveInterruptManager!=0) //中断处理器不为0,即存在中断
+    {
+	return ActiveInterruptManager->DoHandleInterrupt(interruptNumber,esp);
+    }
     return esp;
 }
 
 
 uint32_t InterruptManager::DoHandleInterrupt(uint8_t interruptNumber,uint32_t esp)
 {
-    printf("interrupt!");
+
+    /**/if(handlers[interruptNumber] !=0 ) 
+    {
+	esp = handlers[interruptNumber]->HandleInterrupt(esp);
+    }
+    else if(interruptNumber != 0x20 ){
+	char* foo = "interrupt 0x00";
+	char *hex = "0123456789ABCDEF";
+	foo[12] = hex[(interruptNumber >> 4) & 0x0F];
+	foo[13] = hex[interruptNumber & 0x0F];
+	printf(foo);
+
+    }
+    
+    if(0x20 <= interruptNumber && interruptNumber<0x30){
+	picMasterCommand.Write(0x20);
+	if(0x28 <= interruptNumber){
+	    picSlaveCommand.Write(0x20);
+	}
+    }
 
     return esp;
 }
